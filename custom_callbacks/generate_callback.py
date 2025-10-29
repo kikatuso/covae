@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import torch
 import torchvision
 from lightning.pytorch.utilities.seed import isolate_rng
-from lightning.pytorch import seed_everything
 
 
 class GenerateCallback(L.Callback):
@@ -41,7 +40,7 @@ class GenerateCallback(L.Callback):
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         if pl_module.step % self.every_n_iterations == 0:
             with isolate_rng():
-                seed_everything(32, workers=True)
+                torch.manual_seed(32)
                 # Reconstruct images
                 with torch.no_grad():
                     pl_module.model.eval()
@@ -53,7 +52,7 @@ class GenerateCallback(L.Callback):
 
             if self.plot_rec:
                 with isolate_rng():
-                    seed_everything(32, workers=True)
+                    torch.manual_seed(32)
                     with torch.no_grad():
                         # Reconstruct images
                         if isinstance(batch, list):

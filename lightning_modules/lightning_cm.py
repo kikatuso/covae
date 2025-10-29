@@ -16,6 +16,10 @@ class LightningConsistencyModel(L.LightningModule):
         self.automatic_optimization = False
         self.step = 0
 
+    def setup(self, stage: str) -> None:
+        seed = self.cfg.seed + self.trainer.global_rank
+        torch.manual_seed(seed)
+
     def configure_optimizers(self):
         opt = torch.optim.RAdam(self.model.model.parameters(), lr=self.cfg.model.learning_rate,
                                  weight_decay=self.cfg.model.weight_decay)

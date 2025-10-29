@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import torch
 import torchvision
 from lightning.pytorch.utilities.seed import isolate_rng
-from lightning.pytorch import seed_everything
 import numpy as np
 
 class DiagnosticCallback(L.Callback):
@@ -16,7 +15,7 @@ class DiagnosticCallback(L.Callback):
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         if pl_module.step % self.every_n_iterations == 0:
             with isolate_rng():
-                seed_everything(32, workers=True)
+                torch.manual_seed(32)
                 if isinstance(batch, list):
                     inputs = batch[0]
                     labels = None

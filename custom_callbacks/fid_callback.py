@@ -3,7 +3,6 @@ import lightning as L
 import torch
 from torchmetrics.image.fid import FrechetInceptionDistance
 from lightning.pytorch.utilities.seed import isolate_rng
-from lightning.pytorch import seed_everything
 
 from utils.utils import rescaling_inv, adjust_channels
 
@@ -24,7 +23,7 @@ class FIDCallback(L.Callback):
 
     def on_train_start(self, trainer, pl_module):
         with isolate_rng():
-            seed_everything(32, workers=True)
+            torch.manual_seed(32)
             with torch.no_grad():
                 self.fid = self.fid.to(pl_module.device)
                 for batch in trainer.datamodule.fid_dataloader():
@@ -38,7 +37,7 @@ class FIDCallback(L.Callback):
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         if pl_module.step % self.every_n_iterations == 0:
             with isolate_rng():
-                seed_everything(32, workers=True)
+                torch.manual_seed(32)
                 with torch.no_grad():
                     pl_module.model.eval()
                     self.fid = self.fid.to(pl_module.device)
@@ -74,7 +73,7 @@ class FIDCallback(L.Callback):
 
             if self.compute_rec_fid:
                 with isolate_rng():
-                    seed_everything(32, workers=True)
+                    torch.manual_seed(32)
                     with torch.no_grad():
                         pl_module.model.eval()
                         self.fid = self.fid.to(pl_module.device)
