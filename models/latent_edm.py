@@ -52,7 +52,7 @@ class LatentEDM(nn.Module):
         # Adjust noise levels based on what's supported by the network.
         sigma_min = 0.002
         sigma_max = 80
-        num_steps = 18
+        num_steps = 36
         rho = 7
         S_churn = 0
         S_min = 0
