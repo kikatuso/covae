@@ -39,7 +39,7 @@ class LatentDataModule(L.LightningDataModule):
             self.fid = CIFAR10(self.data_dir, train=True, transform=transforms.ToTensor())
 
     def train_dataloader(self, shuffle=True):
-        return ResumableDataLoader(self.train, batch_size=self.batch_size, shuffle=shuffle, num_workers=self.num_workers)
+        return ResumableDataLoader(self.train, batch_size=self.batch_size, shuffle=shuffle, num_workers=self.num_workers, drop_last=True)
 
     def fid_dataloader(self):
         return DataLoader(self.fid, batch_size=500, shuffle=False, num_workers=self.num_workers)
