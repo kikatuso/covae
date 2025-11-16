@@ -30,7 +30,7 @@ class LatentEDM(nn.Module):
         c_in = 1 / (self.sigma_data ** 2 + sigma ** 2).sqrt()
         c_noise = sigma.log() / 4
 
-        F_x = self.model((c_in * x).to(dtype), c_noise.flatten(), class_labels=class_labels, **model_kwargs)
+        F_x = self.diffusion_net((c_in * x).to(dtype), c_noise.flatten(), class_labels=class_labels, **model_kwargs)
         assert F_x.dtype == dtype
         D_x = c_skip * x + c_out * F_x.to(torch.float32)
         return D_x
@@ -43,7 +43,7 @@ class LatentEDM(nn.Module):
         y = x
         augment_labels = None
         n = torch.randn_like(y) * sigma
-        D_yn = self.diffusion_net(y + n, sigma, labels, augment_labels=augment_labels)
+        D_yn = self.precond(y + n, sigma, labels, augment_labels=augment_labels)
         loss = weight * ((D_yn - y) ** 2)
         return loss, log_dict, None
 
