@@ -77,6 +77,8 @@ def main(cfg: DictConfig) -> None:
     dm = get_datamodule(cfg)
     callbacks = get_callbacks(cfg)
     if cfg.model.name == 'latent_edm':
+        dm.prepare_data()
+        dm.setup('fit')
         model.model.sample_std = dm.train.sample_std
 
     if cfg.use_logger:
