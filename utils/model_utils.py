@@ -64,7 +64,7 @@ def get_latent_net(cfg: DictConfig):
     logger = WandbLogger(resume='must', id=run_id)
     logger.download_artifact(checkpoint_reference, save_dir=cfg.root_dir, artifact_type="model")
     model = LightningConsistencyModel.load_from_checkpoint(checkpoint_path)
-    model = model.model
+    model = model.model.eval().requires_grad_(False)
 
     diffusion_net = SongUNet(
         img_resolution=8,
