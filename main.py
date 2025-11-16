@@ -76,6 +76,8 @@ def main(cfg: DictConfig) -> None:
     name = get_run_name(cfg)
     dm = get_datamodule(cfg)
     callbacks = get_callbacks(cfg)
+    if cfg.model.name == 'latent_edm':
+        model.model.sample_std = dm.train.sample_std
 
     if cfg.use_logger:
         wandb.login(key=key)
