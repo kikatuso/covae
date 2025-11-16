@@ -36,6 +36,7 @@ class LatentEDM(nn.Module):
 
     def loss(self, x, step, labels=None):
         log_dict = {}
+        batch_size = x.size(0)
         rnd_normal = torch.randn([x.shape[0], 1, 1, 1], device=x.device)
         sigma = (rnd_normal * self.P_std + self.P_mean).exp()
         weight = (sigma ** 2 + self.sigma_data ** 2) / (sigma * self.sigma_data) ** 2
@@ -44,7 +45,7 @@ class LatentEDM(nn.Module):
         n = torch.randn_like(y) * sigma
         D_yn = self.precond(y + n, sigma, labels, augment_labels=augment_labels)
         loss = weight * ((D_yn - y) ** 2)
-        return loss, log_dict, None
+        return loss.view(batch_size, -1).sum(1).mean(), log_dict, None
 
     @torch.no_grad()
     def sample(self, sample_shape, n_iters, device, class_labels=None, idx=None, temperature=1):
