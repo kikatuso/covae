@@ -54,6 +54,7 @@ def main(cfg: DictConfig) -> None:
     t = torch.tensor(t_step, dtype=torch.float32).to(model.device)
     mus = []
     stds = []
+    latent_samples = []
     with torch.no_grad():
         model.eval()
         seed_everything(32, workers=True)
@@ -64,16 +65,26 @@ def main(cfg: DictConfig) -> None:
                 data = batch.to(model.device)
 
             mu, std = model.model.encode(data, t, None)
+            latent_sample = torch.distributions.Normal(mu, std).sample(1)
             mus.append(mu)
             stds.append(std)
+            latent_samples.append(latent_sample)
 
         mus = torch.cat(mus, dim=0)
         stds = torch.cat(stds, dim=0)
+        latent_samples = torch.cat(latent_samples, dim=0)
+        mean = latent_samples.mean()
+        var = ((latent_samples - mean) ** 2).mean()
+        std = var.sqrt()
+
+        # Scale factor to get unit std latents
+        scale = std.item()
 
     out = {
         "mu": mus.cpu(),
         "std": stds.cpu(),
         "t": t_step,
+        "scale": scale,
     }
     torch.save(out, Path('/home/gsilvestri/latent_data') / f"covae_latent_{t_step}.pt")
 

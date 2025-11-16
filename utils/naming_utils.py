@@ -36,4 +36,6 @@ def get_run_name(cfg: DictConfig):
                 name += f'_nw_{cfg.model.norm_weight}'
             if cfg.model.denoiser_loss_mode:
                 name += f'_denl'
+    elif cfg.model.name == 'latent_edm':
+        name += f'_{cfg.model.t}'
     return name
