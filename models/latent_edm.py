@@ -88,5 +88,6 @@ class LatentEDM(nn.Module):
 
             x_next = x_next * self.sample_std
             t = torch.tensor(self.t, dtype=torch.float32).to(device)
+            self.model.eval()
             x_next = self.model.decode(x_next, t, None)[0]
         return x_next
