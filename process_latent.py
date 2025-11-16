@@ -51,7 +51,7 @@ def main(cfg: DictConfig) -> None:
     dm.setup(stage="fit")
 
     t_step = 0.05
-    t = torch.tensor({t_step}, dtype=torch.float32).to(model.device)
+    t = torch.tensor(t_step, dtype=torch.float32).to(model.device)
     mus = []
     stds = []
     with torch.no_grad():
