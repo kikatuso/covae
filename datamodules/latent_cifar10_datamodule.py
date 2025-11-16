@@ -16,7 +16,7 @@ class LatentDataset(Dataset):
     def __len__(self):
         return self.mu.shape[0]
     def __getitem__(self, i):
-        return torch.distributions.Normal(self.mu[i], self.std[i]).sample([1])/self.sample_std
+        return torch.distributions.Normal(self.mu[i], self.std[i]).sample()/self.sample_std
 
 
 class LatentDataModule(L.LightningDataModule):
