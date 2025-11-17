@@ -19,22 +19,24 @@ def get_callbacks(cfg: DictConfig):
             GenerateCallback(tuple(cfg.dataset.sample_shape), n_iters=1, use_ema=True,
                              every_n_iterations=cfg.log_frequency, plot_type=cfg.dataset.plot_type, plot_rec=cfg.compute_rec_fid, rescale=rescale))
         callbacks.append(
-            GenerateCallback(tuple(cfg.dataset.sample_shape), n_iters=2, use_ema=True,
-                             every_n_iterations=cfg.log_frequency, plot_type=cfg.dataset.plot_type, rescale=rescale))
-        callbacks.append(
             GenerateCallback(tuple(cfg.dataset.sample_shape), n_iters=1, use_ema=False,
                              every_n_iterations=cfg.log_frequency, plot_type=cfg.dataset.plot_type, rescale=rescale))
-        callbacks.append(
-            GenerateCallback(tuple(cfg.dataset.sample_shape), n_iters=2, use_ema=False,
-                             every_n_iterations=cfg.log_frequency, plot_type=cfg.dataset.plot_type, rescale=rescale))
+        if cfg.model.name != 'latent_edm':
+            callbacks.append(
+                GenerateCallback(tuple(cfg.dataset.sample_shape), n_iters=2, use_ema=True,
+                                 every_n_iterations=cfg.log_frequency, plot_type=cfg.dataset.plot_type, rescale=rescale))
+            callbacks.append(
+                GenerateCallback(tuple(cfg.dataset.sample_shape), n_iters=2, use_ema=False,
+                                 every_n_iterations=cfg.log_frequency, plot_type=cfg.dataset.plot_type, rescale=rescale))
 
     if cfg.compute_fid:
         callbacks.append(
             FIDCallback(tuple(cfg.dataset.fid_sample_shape), n_iters=1, n_dataset_samples=cfg.dataset.n_dataset_samples,
                         every_n_iterations=cfg.log_frequency, compute_rec_fid=cfg.compute_rec_fid, rescale=rescale))
-        callbacks.append(
-            FIDCallback(tuple(cfg.dataset.fid_sample_shape), n_iters=2, n_dataset_samples=cfg.dataset.n_dataset_samples,
-                        every_n_iterations=cfg.log_frequency, rescale=rescale))
+        if cfg.model.name != 'latent_edm':
+            callbacks.append(
+                FIDCallback(tuple(cfg.dataset.fid_sample_shape), n_iters=2, n_dataset_samples=cfg.dataset.n_dataset_samples,
+                            every_n_iterations=cfg.log_frequency, rescale=rescale))
         callbacks.append(ModelCheckpoint(every_n_train_steps=cfg.log_frequency,
                                          save_top_k=1,
                                          monitor="FID_1_iters",
