@@ -13,8 +13,8 @@ class LatentEDM(nn.Module):
         self.sigma_data = 0.5
         self.P_std = 1.2
         self.P_mean = -1.2
-        self.model = model
-        self.diffusion_net = diffusion_net
+        self.autoencoder = model
+        self.model = diffusion_net
         self.sample_std = sample_std
         self.t = t
 
@@ -30,7 +30,7 @@ class LatentEDM(nn.Module):
         c_in = 1 / (self.sigma_data ** 2 + sigma ** 2).sqrt()
         c_noise = sigma.log() / 4
 
-        F_x = self.diffusion_net((c_in * x).to(dtype), c_noise.flatten(), class_labels=class_labels, **model_kwargs)
+        F_x = self.model((c_in * x).to(dtype), c_noise.flatten(), class_labels=class_labels, **model_kwargs)
         D_x = c_skip * x + c_out * F_x.to(torch.float32)
         return D_x
 
@@ -87,6 +87,6 @@ class LatentEDM(nn.Module):
 
         x_next = x_next * self.sample_std
         t = torch.tensor(self.t, dtype=torch.float32).to(device)
-        self.model.eval()
-        x_next = self.model.decode(x_next, t, None)[0]
+        self.autoencoder.eval()
+        x_next = self.autoencoder.decode(x_next, t, None)[0]
         return x_next
