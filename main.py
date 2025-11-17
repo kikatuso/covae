@@ -80,6 +80,7 @@ def main(cfg: DictConfig) -> None:
         dm.prepare_data()
         dm.setup('fit')
         model.model.sample_std = dm.train.sample_std
+        model.ema.sample_std = dm.train.sample_std
 
     if cfg.use_logger:
         wandb.login(key=key)
