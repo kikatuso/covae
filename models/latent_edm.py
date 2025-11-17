@@ -86,7 +86,7 @@ class LatentEDM(nn.Module):
                 x_next = x_hat + (t_next - t_hat) * (0.5 * d_cur + 0.5 * d_prime)
 
         x_next = x_next * self.sample_std
-        t = torch.ones(x_next.shape[0], dtype=torch.float34, device=device) * self.t
+        t = torch.ones(x_next.shape[0], dtype=torch.float32, device=device) * self.t
         self.autoencoder.eval()
         x_next = self.autoencoder.decode(x_next, t, None)[0]
         return x_next
