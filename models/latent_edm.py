@@ -63,7 +63,7 @@ class LatentEDM(nn.Module):
         t_steps = (sigma_max ** (1 / rho) + step_indices / (num_steps - 1) * (
                     sigma_min ** (1 / rho) - sigma_max ** (1 / rho))) ** rho
         t_steps = torch.cat([torch.as_tensor(t_steps), torch.zeros_like(t_steps[:1])])  # t_N = 0
-        latents = torch.randn(sample_shape, device=device) * sigma_max
+        latents = torch.randn(sample_shape, device=device)
         # Main sampling loop.
         x_next = latents.to(torch.float64) * t_steps[0]
         for i, (t_cur, t_next) in enumerate(zip(t_steps[:-1], t_steps[1:])):  # 0, ..., N-1
