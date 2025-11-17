@@ -70,7 +70,6 @@ def get_latent_net(cfg: DictConfig):
         img_resolution=8,
         in_channels=16,
         out_channels=16,
-        attn_resolutions=[8],
         label_dim=0,
         channel_mult=[2,2,2],
         dropout=0.1,
