@@ -59,7 +59,7 @@ def get_latent_net(cfg: DictConfig):
     run_path = Path(cfg.run_path)
     run_id = run_path.name
     run_path = run_path.with_name(f'model-{run_path.name}')
-    checkpoint_reference = f'{run_path}:latest'
+    checkpoint_reference = f'{run_path}:best'
     checkpoint_path = Path(cfg.root_dir) / "model.ckpt"
     logger = WandbLogger(resume='must', id=run_id)
     logger.download_artifact(checkpoint_reference, save_dir=cfg.root_dir, artifact_type="model")
@@ -70,6 +70,7 @@ def get_latent_net(cfg: DictConfig):
         img_resolution=8,
         in_channels=16,
         out_channels=16,
+        attn_resolutions=[8],
         label_dim=0,
         channel_mult=[2,2,2]
     )

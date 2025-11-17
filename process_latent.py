@@ -66,7 +66,6 @@ def main(cfg: DictConfig) -> None:
 
             mu, std = model.model.encode(data, t, None)
             latent_sample = torch.distributions.Normal(mu, std).sample()
-            print(latent_sample.shape)
             mus.append(mu)
             stds.append(std)
             latent_samples.append(latent_sample)
