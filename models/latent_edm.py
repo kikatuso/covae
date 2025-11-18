@@ -16,6 +16,14 @@ class LatentEDM(nn.Module):
         self.sample_std = sample_std
         self.t = t
 
+    def _append_dims(self, x, target_dims):
+        """Appends dimensions to the end of a tensor until it has target_dims dimensions."""
+        dims_to_append = target_dims - x.ndim
+        if dims_to_append < 0:
+            raise ValueError(
+                f"input has {x.ndim} dims but target_dims is {target_dims}, which is less"
+            )
+        return x[(...,) + (None,) * dims_to_append]
 
     def precond(self, x, t, class_labels, **model_kwargs):
         x = x.to(torch.float32)
