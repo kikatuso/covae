@@ -38,6 +38,7 @@ class LatentEDM(nn.Module):
 
     @torch.no_grad()
     def sample(self, sample_shape, n_iters, device, class_labels=None, idx=None, temperature=1):
+        n_iters = 100
         x_t = torch.randn(sample_shape, device=device)
         time_steps = torch.linspace(0., 1., n_iters)
         delta_t = time_steps[1] - time_steps[0]
