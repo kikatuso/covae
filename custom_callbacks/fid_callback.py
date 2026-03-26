@@ -1,4 +1,10 @@
 
+import os, sys
+
+sys.path.append(os.getcwd()) 
+os.environ['TORCH_HOME'] = '/gpfs3/well/papiez/users/zwk579/.cache/torch/hub/checkpoints/'
+
+
 import lightning as L
 import torch
 from torchmetrics.image.fid import FrechetInceptionDistance
