@@ -6,7 +6,7 @@ use_logger: True
 project: 'covae'
 fast_dev_run: False
 enable_progress_bar: True
-root_dir: '.'
+root_dir: '/gpfs3/well/papiez/users/zwk579/Results/covae/logs/'
 requeue: True
 log_samples: True
 compute_fid: True
@@ -16,11 +16,11 @@ seed: 42
 extra_name: ''
 reload: False
 run_path: ''
-log_model: 'all'
+log_model: False
 deterministic: False
 sync_batchnorm: False
 
-log_frequency: 100
+log_frequency: 10000
 precision: 'bf16-mixed'
 accumulate_grad_batches: 1
 accelerator: 'auto'

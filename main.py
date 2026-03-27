@@ -95,7 +95,7 @@ def main(cfg: DictConfig) -> None:
         total_training_steps = cfg.model.total_training_steps + (cfg.model.total_training_steps - cfg.model.gan_warmup_steps) * 2
     else:
         total_training_steps = cfg.model.total_training_steps
-
+    
     trainer = L.Trainer(max_steps=total_training_steps,
                         logger=logger,
                         strategy=cfg.strategy,
@@ -127,4 +127,8 @@ def main(cfg: DictConfig) -> None:
 
 
 if __name__ == "__main__":
+
+
+    # source: https://github.com/gisilvs/covae
+
     main()
