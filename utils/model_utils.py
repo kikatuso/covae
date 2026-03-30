@@ -38,7 +38,6 @@ def get_neural_net(cfg: DictConfig, pretrained_net):
             attn_resolutions=cfg.network.attn_resolutions,
             dropout=cfg.network.dropout,
             z_channels=cfg.network.z_channels,
-            final_dim=cfg.network.final_dim,
         )
     else:
         raise NotImplementedError
@@ -49,10 +48,7 @@ def get_model(cfg: DictConfig, pretrained_net=None):
     net = get_neural_net(cfg, pretrained_net)
 
     latent_size = cfg.dataset.img_resolution // (2 ** (len(cfg.network.channel_mult_enc) - 1))
-    if isinstance(cfg.network.final_dim, int):
-        noise_shape = [cfg.network.final_dim]
-    else:
-        noise_shape = [cfg.network.z_channels, latent_size, latent_size]
+    noise_shape = [cfg.network.z_channels, latent_size, latent_size]
 
     if cfg.model.use_gan:
         discriminator = get_discriminator(cfg)
@@ -81,9 +77,7 @@ def get_model(cfg: DictConfig, pretrained_net=None):
                      time_scale=cfg.model.time_scale,
                      rec_weight_mode=cfg.model.rec_weight_mode,
                      kl_weight_mode=cfg.model.kl_weight_mode,
-                     lambda_denoiser=cfg.model.lambda_denoiser,
-                     latent_type=cfg.model.latent_type,
-                     latent_shape=list(cfg.model.latent_shape),
+                     lambda_denoiser=cfg.model.lambda_denoiser
                      )
 
     elif cfg.model.name == 'covae_simple':

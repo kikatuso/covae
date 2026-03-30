@@ -32,7 +32,3 @@ norm_strength: 0.001
 mid_t: 0.821
 norm_weight: 'fixed'
 noise_schedule: 'lognormal'
-
-## covae_discrete_latent
-latent_type: 'gaussian'
-latent_shape: []

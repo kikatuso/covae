@@ -9,6 +9,7 @@ import time
 
 import torch
 import wandb
+import os
 
 torch.set_float32_matmul_precision('medium')
 
@@ -71,9 +72,6 @@ def main(cfg: DictConfig) -> None:
         num_of_gpus = len(cfg.devices)
     else:
         num_of_gpus = 1
-
-    if num_of_gpus > 1:
-        cfg['batch_multiplier'] = num_of_gpus
 
     name = get_run_name(cfg)
     dm = get_datamodule(cfg)

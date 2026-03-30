@@ -13,8 +13,6 @@ class CoVAE(CoVAEBase):
                  rec_weight_mode,
                  kl_weight_mode,
                  lambda_denoiser,
-                 latent_type,
-                 latent_shape,
                  **cm_kwargs
                  ):
         super().__init__(**cm_kwargs)
@@ -22,51 +20,13 @@ class CoVAE(CoVAEBase):
         self.rec_weight_mode = rec_weight_mode
         self.kl_weight_mode = kl_weight_mode
         self.lambda_denoiser = lambda_denoiser
-        self.latent_type = latent_type
-        self.latent_shape = latent_shape
-        assert latent_type in ['gaussian', 'categorical']
-        if latent_type == 'categorical':
-            assert self.num_elements(self.latent_shape) == self.num_elements(self.noise_shape)
-
-    def num_elements(self, shape):
-        return reduce(operator.mul, shape, 1)
-
-    def _get_distribution(self, mu, std):
-        if self.latent_type == 'gaussian':
-            return torch.distributions.Normal(mu, std)
-        elif self.latent_type == 'categorical':
-            mu = mu.view([mu.shape[0]] + self.latent_shape[::-1]).transpose(1,2)
-            return torch.distributions.Categorical(logits=mu)
-
-    def gumbel_softmax_sample(self, logits, noise, tau=1.0):
-        gumbel_noise = -torch.log(-torch.log(noise + 1e-20) + 1e-20)
-        y = logits + gumbel_noise
-        return nn.functional.softmax(y / tau, dim=-1)
-
-    def gumbel_softmax(self, logits, noise, tau=1.0, hard=False):
-        y = self.gumbel_softmax_sample(logits, noise, tau)
-        if hard:
-            y_hard = torch.zeros_like(y)
-            y_hard.scatter_(-1, y.argmax(dim=-1, keepdim=True), 1.0)
-            y = (y_hard - y).detach() + y  # Straight-through estimator
-        return y
 
     def sample_noise(self, batch_size, device):
-        if self.latent_type == 'gaussian':
-            return torch.randn([batch_size] + self.noise_shape, dtype=torch.float32).to(device)
-        elif self.latent_type == 'categorical':
-            return torch.rand([batch_size] + self.latent_shape, dtype=torch.float32).to(device)
+        return torch.randn([batch_size] + self.noise_shape, dtype=torch.float32).to(device)
 
-
-    def _reparametrized_sample(self, mu, std, noise):
-        if self.latent_type == 'gaussian':
-            return mu + std * noise
-        elif self.latent_type == 'categorical':
-            mu_shape = mu.shape
-            mu = mu.view([mu.shape[0]] + self.latent_shape[::-1]).transpose(1,2)
-            sample = self.gumbel_softmax(mu, noise, hard=True)
-            return sample.transpose(1,2).view(mu_shape)
-
+    def _reparametrized_sample(self, mu, logvar, noise):
+        std = torch.exp(0.5 * logvar)
+        return mu + std * noise
 
     def _get_time_steps(self, num_timesteps, device):
         assert self.time_scale in ['linear', 'log', 'karras']
@@ -115,10 +75,12 @@ class CoVAE(CoVAEBase):
         t = self._append_dims(t, x.ndim).to(x).to(torch.float32)
         c_noise = t.log() / 4
         emb = self.model.time_embedding(c_noise.flatten(), class_labels=class_labels)
-        mu, std = self.model.encoder(x, emb)
-        z = self._reparametrized_sample(mu, std, noise)
+        mu, logvar = self.model.encoder(x, emb)
+        print('mu', mu.shape, 'logvar', logvar.shape, 'noise', noise.shape)
+        import sys; sys.exit()
+        z = self._reparametrized_sample(mu, logvar, noise)
         x, denoiser_x = self._decode_fn(z, t, emb)
-        return x, mu, std, denoiser_x
+        return x, mu, logvar, denoiser_x
 
     def decode(self, z, t, class_labels):
         z = z.to(torch.float32)
@@ -133,8 +95,8 @@ class CoVAE(CoVAEBase):
         t = self._append_dims(t, x.ndim).to(x).to(torch.float32)
         c_noise = t.log() / 4
         emb = self.model.time_embedding(c_noise.flatten(), class_labels)
-        mu, std = self.model.encoder(x, emb)
-        return mu, std
+        mu, logvar = self.model.encoder(x, emb)
+        return mu, logvar
 
     def encode_decode(self, x, idx=1, class_labels=None, noise=None):
         device = x.device
@@ -160,7 +122,7 @@ class CoVAE(CoVAEBase):
         noise = self.sample_noise(batch_size, device)
 
         with isolate_rng():
-            x_t, mu, std, denoiser_x = self.precond(x, t, noise, labels)
+            x_t, mu, logvar, denoiser_x = self.precond(x, t, noise, labels)
 
         if (idxs == 0).all():
             # save time when training simple vae
@@ -206,13 +168,15 @@ class CoVAE(CoVAEBase):
             gan_loss = 0.
 
         rec_loss = rec_loss.view(batch_size, -1).sum(1) * rec_loss_weights
-        posterior = self._get_distribution(mu, std + 1e-8)
-        prior = self._get_distribution(torch.zeros_like(mu), torch.ones_like(std))
-        kl_loss = torch.distributions.kl_divergence(posterior, prior)
-        log_dict['kl_loss'] = kl_loss.detach().reshape(batch_size, -1).sum(1).mean()
-        kl_loss = kl_loss.reshape(batch_size, -1).sum(-1) * kl_loss_weights
+        kl_loss = self.kl_loss(mu, logvar) * kl_loss_weights
 
         return (rec_loss + denoiser_loss + kl_loss).mean() + gan_loss, log_dict, x_t
+    
+    def kl_loss(self, mu, logvar):
+        var = torch.exp(logvar)
+        kl = 0.5 * torch.sum(mu**2 + var - logvar - 1, dim=1)
+        return kl.mean()
+        
 
     @torch.no_grad()
     def sample(self, sample_shape, n_iters, device, class_labels=None, idx=None, temperature=1):

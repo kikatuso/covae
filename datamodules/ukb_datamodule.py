@@ -17,6 +17,7 @@ class UKBDataModule(L.LightningDataModule):
         self.num_workers = num_workers
         self.data_dir = data_dir
         self.transform = transforms.Compose([
+            transforms.Resize((32,32)),
             transforms.ToTensor(),
         ])
     def setup(self, stage: str):
@@ -37,7 +38,7 @@ class UKBDataModule(L.LightningDataModule):
         return ResumableDataLoader(self.train, batch_size=self.batch_size, shuffle=shuffle, num_workers=self.num_workers)
 
     def fid_dataloader(self):
-        return DataLoader(self.fid, batch_size=500, shuffle=False, num_workers=self.num_workers)
+        return DataLoader(self.fid, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
 
     def val_dataloader(self):
         return DataLoader(self.test, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)

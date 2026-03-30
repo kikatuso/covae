@@ -5,6 +5,7 @@ import torch.nn as nn
 import numpy as np
 from torch.nn.functional import silu
 
+
 def weight_init(shape, mode, fan_in, fan_out):
     if mode == 'xavier_uniform': return np.sqrt(6 / (fan_in + fan_out)) * (torch.rand(*shape) * 2 - 1)
     if mode == 'xavier_normal':  return np.sqrt(2 / (fan_in + fan_out)) * torch.randn(*shape)
@@ -213,7 +214,6 @@ class AutoEncoder(nn.Module):
                  attn_resolutions=[16],
                  dropout=0.10,
                  z_channels=4,
-                 final_dim=None,
                  ):
         super().__init__()
 
@@ -242,7 +242,6 @@ class AutoEncoder(nn.Module):
             dropout=dropout,
             z_channels=z_channels,
             temb_ch=self.temb_ch,
-            final_dim=final_dim,
         )
 
         self.decoder = Decoder(
@@ -255,7 +254,6 @@ class AutoEncoder(nn.Module):
             dropout=dropout,
             z_channels=z_channels,
             temb_ch=self.temb_ch,
-            final_dim=final_dim,
         )
 
     def time_embedding(self, t, class_labels=None):
@@ -282,12 +280,11 @@ class Encoder(nn.Module):
                  dropout,
                  z_channels,
                  temb_ch,
-                 final_dim=None,
+                 **ignore_kwargs,
                  ):
         super().__init__()
 
         self.z_channels = z_channels
-        self.final_dim = final_dim
         init = dict(init_mode='xavier_uniform')
         init_zero = dict(init_mode='xavier_uniform', init_weight=1e-5)
         init_attn = dict(init_mode='xavier_uniform', init_weight=np.sqrt(0.2))
@@ -322,32 +319,26 @@ class Encoder(nn.Module):
         self.norm_out = GroupNorm(cout)
         self.conv_out = Conv2d(cout, 2 * z_channels, kernel=3, **init)
         self.quant_conv = Conv2d(2 * z_channels, 2 * z_channels, 1, **init)
-        if isinstance(final_dim, int):
-            assert final_dim == z_channels
-            #final_res = int(img_resolution/(2**(len(channel_mult)-1)))
-            #pre_dim = z_channels * 2 * final_res ** 2
-            self.avg_pooling = nn.AdaptiveAvgPool2d((1, 1))
+
 
     def forward(self, x, temb):
         # Encoder.
         for name, block in self.enc.items():
+            print(name, x.shape)
             x = block(x, temb) if isinstance(block, UNetBlock) else block(x)
 
         x = self.mid_block_1(x, temb)
+        print('mid_block_1:', x.shape)
         x = self.mid_block_2(x, temb)
+        print('mid_block_2:', x.shape)
         x = self.norm_out(x)
         x = silu(x)
         x = self.conv_out(x)
+        print('conv_out:', x.shape)
         x = self.quant_conv(x)
-        if isinstance(self.final_dim, int):
-            # x = x.flatten(1)
-            x = self.avg_pooling(x).view(x.shape[0], -1)
-            mu = x[:, :self.final_dim]
-            std = nn.functional.softplus(x[:, self.final_dim:])
-        else:
-            mu = x[:, :self.z_channels]
-            std = nn.functional.softplus(x[:, self.z_channels:])
-        return mu, std
+        print('quant_conv:', x.shape)
+        mu, logvar = x.chunk(chunks=2, dim=1)
+        return mu, logvar
 
 class Decoder(nn.Module):
     def __init__(self,
@@ -360,13 +351,11 @@ class Decoder(nn.Module):
                  dropout,
                  z_channels,
                  temb_ch,
-                 final_dim=None,
                  ):
         super().__init__()
 
         self.z_channels = z_channels
         self.img_resolution = img_resolution
-        self.final_dim = final_dim
         init = dict(init_mode='xavier_uniform')
         init_zero = dict(init_mode='xavier_uniform', init_weight=1e-5)
         init_attn = dict(init_mode='xavier_uniform', init_weight=np.sqrt(0.2))
@@ -400,15 +389,8 @@ class Decoder(nn.Module):
                 self.dec[f'{res}x{res}_aux_conv'] = Conv2d(in_channels=cout, out_channels=out_channels, kernel=3,
                                                            **init_zero)
 
-        if isinstance(final_dim, int):
-            self.final_res = int(img_resolution/(2**(len(channel_mult)-1)))
-            pre_dim = z_channels * self.final_res ** 2
-            self.final_dense = Linear(in_features=final_dim, out_features=pre_dim, **init)
 
     def forward(self, z, temb):
-        if isinstance(self.final_dim, int):
-            z = silu(self.final_dense(z))
-            z = z.view(-1, self.z_channels, self.final_res, self.final_res)
         # timestep embedding
         z = self.post_quant_conv(z)
         # z to block_in
