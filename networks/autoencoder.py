@@ -430,3 +430,20 @@ class Decoder(nn.Module):
 
     def get_last_layer(self):
         return self.dec[f'{self.img_resolution}x{self.img_resolution}_aux_conv'].weight
+
+if __name__ == "__main__":
+    model = Encoder(
+        img_resolution=256,
+        in_channels=3,
+        model_channels=64,
+        channel_mult=[1, 2, 2, 4],
+        num_blocks=2,
+        attn_resolutions=[16],
+        dropout=0.1,
+        z_channels=8,
+        temb_ch=256,
+    )
+    x = torch.randn(1, 3, 256, 256)
+    t = torch.randn(1, 256)
+    mu, std = model(x, t)
+    print(mu.shape, std.shape)

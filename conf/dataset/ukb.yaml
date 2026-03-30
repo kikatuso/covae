@@ -1,0 +1,13 @@
+name: 'ukb'
+
+batch_size: 8
+num_workers: 8
+data_dir: "/gpfs3/well/papiez/users/zwk579/.temp_data/256x256px/"
+sample_shape: [256, 3, 256, 256]
+fid_sample_shape: [500, 3, 256, 256]
+n_dataset_samples: 90351
+input_shape: [3, 256, 256]
+plot_type: 'grid'
+img_resolution: 256
+in_channels: 3
+out_channels: 3

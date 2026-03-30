@@ -10,6 +10,8 @@ import time
 import torch
 import wandb
 
+torch.set_float32_matmul_precision('medium')
+
 from lightning_modules.lightning_cm import LightningConsistencyModel
 from utils.callback_utils import get_callbacks, get_delete_checkpoints_callback
 from utils.datamodule_utils import get_datamodule

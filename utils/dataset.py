@@ -243,3 +243,34 @@ class ImageFolderDataset(Dataset):
         labels = np.array(labels)
         labels = labels.astype({1: np.int64, 2: np.float32}[labels.ndim])
         return labels
+    
+import glob 
+class UKB_dataset(Dataset):
+    def __init__(self, path='/gpfs3/well/papiez/users/zwk579/.temp_data/256x256px/',extension='png',submdole_search=True,transform=None, **super_kwargs):
+        self._path = path
+        if submdole_search:
+            self.img_paths = glob.glob(os.path.join(path, '**', f'*.{extension}'), recursive=True)
+        else:
+            self.img_paths = glob.glob(os.path.join(path, f'*.{extension}'))
+        assert len(self.img_paths) > 0, f'No images found in {path} with extension {extension}'
+        if transform is not None:
+            self.transform = transform
+        
+    def __len__(self):
+        return len(self.img_paths)
+        
+    def open(self, idx):
+        img = PIL.Image.open(self.img_paths[idx])
+        if self.transform is not None:
+            img = self.transform(img)
+        return img
+        
+    def __getitem__(self, idx):
+        img = self.open(idx)
+        return img, torch.tensor(0) # dummy label
+
+
+if __name__ == "__main__":
+    dataset = UKB_dataset()
+    x, y = dataset[0]
+    print(x.shape, y.shape)
