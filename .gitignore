@@ -173,3 +173,7 @@ tsne
 viz
 wandb
 model.ckpt
+
+*.png
+*.jpg
+*.jpeg

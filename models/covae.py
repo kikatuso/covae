@@ -71,28 +71,26 @@ class CoVAE(CoVAEBase):
         return x, denoiser_x
 
     def precond(self, x, t, noise, class_labels):
-        x = x.to(torch.float32)
-        t = self._append_dims(t, x.ndim).to(x).to(torch.float32)
-        c_noise = t.log() / 4
-        emb = self.model.time_embedding(c_noise.flatten(), class_labels=class_labels)
+        emb = self._time_embedding(t, x.ndim, class_labels)
         mu, logvar = self.model.encoder(x, emb)
         z = self._reparametrized_sample(mu, logvar, noise)
         x, denoiser_x = self._decode_fn(z, t, emb)
         return x, mu, logvar, denoiser_x
 
-    def decode(self, z, t, class_labels):
-        z = z.to(torch.float32)
-        t = self._append_dims(t, z.ndim).to(z).to(torch.float32)
+    def _time_embedding(self, t, ndim, class_labels):
+        t = self._append_dims(t, ndim).to(torch.float32)
+        t = torch.clamp(t, min=1e-8)
         c_noise = t.log() / 4
-        emb = self.model.time_embedding(c_noise.flatten(), class_labels)
+        emb = self.model.time_embedding(c_noise.flatten(), class_labels=class_labels)
+        return emb
+
+    def decode(self, z, t, class_labels):
+        emb = self._time_embedding(t, z.ndim, class_labels)
         x, denoiser_x = self._decode_fn(z, t, emb)
         return x, denoiser_x
 
     def encode(self, x, t, class_labels):
-        x = x.to(torch.float32)
-        t = self._append_dims(t, x.ndim).to(x).to(torch.float32)
-        c_noise = t.log() / 4
-        emb = self.model.time_embedding(c_noise.flatten(), class_labels)
+        emb = self._time_embedding(t, x.ndim, class_labels)
         mu, logvar = self.model.encoder(x, emb)
         return mu, logvar
 
@@ -168,6 +166,8 @@ class CoVAE(CoVAEBase):
         rec_loss = rec_loss.view(batch_size, -1).sum(1) * rec_loss_weights
         kl_loss = self.kl_loss(mu, logvar) * kl_loss_weights
 
+        log_dict['kl_loss'] = kl_loss.detach().mean()
+
         return (rec_loss + denoiser_loss + kl_loss).mean() + gan_loss, log_dict, x_t
     
     def kl_loss(self, mu, logvar):
@@ -196,3 +196,6 @@ class CoVAE(CoVAEBase):
             noise = self.sample_noise(sample_shape[0], device)
             x, _, _, _ = self.precond(x, t, noise, class_labels)
         return x
+
+
+   

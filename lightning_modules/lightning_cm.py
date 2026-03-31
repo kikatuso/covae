@@ -70,7 +70,7 @@ class LightningConsistencyModel(L.LightningModule):
         self.step += 1
 
         for key, value in log_dict.items():
-            self.log(key, value, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+            self.log(key, value, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
     @torch.no_grad()

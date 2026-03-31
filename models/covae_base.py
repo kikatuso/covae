@@ -21,6 +21,7 @@ class CoVAEBase(nn.Module):
                  gan_warmup_steps,
                  discriminator,
                  gan_lambda,
+                 **ignore_kwargs
                  ):
 
         super().__init__()
@@ -87,10 +88,8 @@ class CoVAEBase(nn.Module):
 
         elif self.step_schedule == 'none':
             num_timesteps = self.end_scales + 1
-
         else:
             raise NotImplementedError
-
         return int(num_timesteps)
 
     def hinge_d_loss(self, logits_real, logits_fake):

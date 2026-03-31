@@ -93,3 +93,34 @@ def get_model(cfg: DictConfig, pretrained_net=None):
                            noise_schedule=cfg.model.noise_schedule,
                            norm_weight=cfg.model.norm_weight,
                      )
+
+if __name__ =='__main__':
+
+    import hydra
+    import torch
+
+    import matplotlib.pyplot as plt
+
+    @hydra.main(version_base=None, config_path="../conf", config_name="config")
+    def main(cfg: DictConfig):
+        model = get_model(cfg)
+
+        total_training_steps = model.total_training_steps
+        num_timesteps = model._step_schedule(total_training_steps)
+        print('num_timesteps', num_timesteps)
+        timesteps = model._get_time_steps(num_timesteps, device='cpu')
+        kl_weights = model._get_kl_loss_weights(timesteps).cpu().numpy()
+        rec_weights = model._get_rec_loss_weights(timesteps).cpu().numpy()
+        print('kl_weights', kl_weights.min(), kl_weights.max())
+        print('rec_weights', rec_weights.min(), rec_weights.max())
+
+        fig, ax = plt.subplots(ncols=3, figsize=(15, 5))
+        ax[0].plot(timesteps.cpu().numpy())
+        ax[0].set_title('timesteps')
+        ax[1].plot(kl_weights)
+        ax[1].set_title('kl_weights')
+        ax[2].plot(rec_weights)
+        ax[2].set_title('rec_weights')
+        plt.savefig('weights.png')
+
+    main()

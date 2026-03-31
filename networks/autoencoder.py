@@ -223,8 +223,6 @@ class AutoEncoder(nn.Module):
         emb_channels = model_channels * 4
         noise_channels = model_channels
 
-        print('out_channels', out_channels, 'denoiser_loss_mode', denoiser_loss_mode)
-
         # Mapping.
         self.map_noise = PositionalEmbedding(num_channels=noise_channels,
                                              endpoint=True)

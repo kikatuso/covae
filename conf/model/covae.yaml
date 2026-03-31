@@ -9,7 +9,7 @@ sigma_min: 0.05
 sigma_max: 3
 rho: 7
 start_scales: 2
-end_scales: 256
+end_scales: 1024
 total_training_steps: 400000
 loss_mode: 'huber'
 denoiser_loss_mode: 'l2'

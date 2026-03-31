@@ -13,7 +13,7 @@ cmd = [
     "dataset=ukb", 
     "dataset.name=ukb",
     "dataset.num_workers=3",   # dataloader workers
-    "dataset.batch_size=12",
+    "dataset.batch_size=16",
     'dataset.img_resolution=256',
 
     "model=covae", # covae
@@ -22,7 +22,7 @@ cmd = [
     "model.total_training_steps=400000",
     "model.step_schedule=exp",
     "model.start_scales=2",
-    "model.end_scales=256",
+    "model.end_scales=1024",
 
     "model.sigma_min=0.05",
     "model.sigma_max=3",
@@ -41,6 +41,8 @@ cmd = [
     "network.attn_resolutions=[]",
     "network.z_channels=8",
     "network.model_channels=64",
+    "network.num_blocks_enc=1",
+    "network.num_blocks_dec=1",
     "network.channel_mult_enc=[1,2,2,4]",
     "network.channel_mult_dec=[1,2,2,4]",
 
