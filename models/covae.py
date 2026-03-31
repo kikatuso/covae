@@ -134,6 +134,8 @@ class CoVAE(CoVAEBase):
         else:
             # boundary condition
             x_r = torch.where(self._append_dims(idxs > 0, dims).to(device), x_r, x)
+        
+        print('x shape', x.shape, 'x_t shape', x_t.shape, 'x_r shape', x_r.shape)
 
         rec_loss = self._loss_fn(x_t, x_r.detach(), self.loss_mode)
         log_dict['rec_loss'] = rec_loss.detach().view(batch_size, -1).sum(1).mean()
@@ -184,7 +186,6 @@ class CoVAE(CoVAEBase):
         mu = torch.zeros([sample_shape[0]] + self.noise_shape, dtype=torch.float32, device=device)
         std = torch.ones([sample_shape[0]] + self.noise_shape, dtype=torch.float32, device=device)
         z = self._reparametrized_sample(mu, std, noise)
-        print('sample shape', sample_shape, 'noise shape', noise.shape, 'z shape', z.shape)
         # z = torch.randn([sample_shape[0]] + self.noise_shape).to(device)
         x, _ = self.decode(z, t, class_labels)
         if idx is None:
@@ -195,7 +196,5 @@ class CoVAE(CoVAEBase):
         for i in range(1, n_iters):
             t = torch.ones(sample_shape[0], device=device) * time_steps[idx].to(device)
             noise = self.sample_noise(sample_shape[0], device)
-            print('noise shape', noise.shape)
-            print('x shape before precond', x.shape) # this is Bx1xHxW when it should be Bx3xHxW
             x, _, _, _ = self.precond(x, t, noise, class_labels)
         return x
