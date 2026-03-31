@@ -65,32 +65,32 @@ class CoVAE(CoVAEBase):
         x = self.model.decoder(z, emb)
         if self.denoiser_loss_mode:
             x, denoiser_x = torch.chunk(x, 2, dim=1)
-            x = denoiser_x.detach() + (t - self.sigma_min) / (self.sigma_max - self.sigma_min) * x.to(torch.float32)
+            x = denoiser_x.detach() + (t - self.sigma_min) / (self.sigma_max - self.sigma_min) * x
         else:
             denoiser_x = None
         return x, denoiser_x
 
     def precond(self, x, t, noise, class_labels):
-        emb = self._time_embedding(t, x.ndim, class_labels)
+        emb,t = self._time_embedding(t, x, class_labels)
         mu, logvar = self.model.encoder(x, emb)
         z = self._reparametrized_sample(mu, logvar, noise)
         x, denoiser_x = self._decode_fn(z, t, emb)
         return x, mu, logvar, denoiser_x
 
-    def _time_embedding(self, t, ndim, class_labels):
-        t = self._append_dims(t, ndim).to(torch.float32)
+    def _time_embedding(self, t, x, class_labels):
+        t = self._append_dims(t, x.ndim).to(x)
         t = torch.clamp(t, min=1e-8)
         c_noise = t.log() / 4
         emb = self.model.time_embedding(c_noise.flatten(), class_labels=class_labels)
-        return emb
+        return emb,t 
 
     def decode(self, z, t, class_labels):
-        emb = self._time_embedding(t, z.ndim, class_labels)
+        emb,t = self._time_embedding(t, z, class_labels)
         x, denoiser_x = self._decode_fn(z, t, emb)
         return x, denoiser_x
 
     def encode(self, x, t, class_labels):
-        emb = self._time_embedding(t, x.ndim, class_labels)
+        emb,t = self._time_embedding(t, x, class_labels)
         mu, logvar = self.model.encoder(x, emb)
         return mu, logvar
 
