@@ -9,7 +9,7 @@ from utils.utils import ResumableDataLoader
 
 
 class UKBDataModule(L.LightningDataModule):
-    def __init__(self, batch_size, num_workers=0,train_size=0.8,seed=42, data_dir: str = "/gpfs3/well/papiez/users/zwk579/.temp_data/256x256px/"):
+    def __init__(self, batch_size, num_workers=0,train_size=0.8,image_size=256,seed=42, data_dir: str = "/gpfs3/well/papiez/users/zwk579/.temp_data/256x256px/"):
         super().__init__()
         self.batch_size = batch_size
         self.train_size = train_size
@@ -17,7 +17,7 @@ class UKBDataModule(L.LightningDataModule):
         self.num_workers = num_workers
         self.data_dir = data_dir
         self.transform = transforms.Compose([
-            transforms.Resize((32,32)),
+            transforms.Resize((image_size, image_size)),
             transforms.ToTensor(),
         ])
     def setup(self, stage: str):

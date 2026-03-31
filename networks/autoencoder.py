@@ -214,6 +214,7 @@ class AutoEncoder(nn.Module):
                  attn_resolutions=[16],
                  dropout=0.10,
                  z_channels=4,
+                 denoiser_loss_mode=False,
                  ):
         super().__init__()
 
@@ -254,6 +255,7 @@ class AutoEncoder(nn.Module):
             dropout=dropout,
             z_channels=z_channels,
             temb_ch=self.temb_ch,
+            denoiser_loss_mode=denoiser_loss_mode,
         )
 
     def time_embedding(self, t, class_labels=None):
@@ -324,19 +326,14 @@ class Encoder(nn.Module):
     def forward(self, x, temb):
         # Encoder.
         for name, block in self.enc.items():
-            print(name, x.shape)
             x = block(x, temb) if isinstance(block, UNetBlock) else block(x)
 
         x = self.mid_block_1(x, temb)
-        print('mid_block_1:', x.shape)
         x = self.mid_block_2(x, temb)
-        print('mid_block_2:', x.shape)
         x = self.norm_out(x)
         x = silu(x)
         x = self.conv_out(x)
-        print('conv_out:', x.shape)
         x = self.quant_conv(x)
-        print('quant_conv:', x.shape)
         mu, logvar = x.chunk(chunks=2, dim=1)
         return mu, logvar
 
@@ -351,6 +348,7 @@ class Decoder(nn.Module):
                  dropout,
                  z_channels,
                  temb_ch,
+                 denoiser_loss_mode=False,
                  ):
         super().__init__()
 
@@ -368,6 +366,8 @@ class Decoder(nn.Module):
         cout = channel_mult[-1] * model_channels
         self.conv_in = Conv2d(z_channels, cout, kernel=3, **init)
         self.post_quant_conv = Conv2d(z_channels, z_channels, 1, **init)
+        if denoiser_loss_mode is not None:
+            out_channels = out_channels * 2 # predict noise and denoised x for denoiser loss
 
         self.dec = torch.nn.ModuleDict()
         for level, mult in reversed(list(enumerate(channel_mult))):

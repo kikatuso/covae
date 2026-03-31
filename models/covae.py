@@ -76,8 +76,6 @@ class CoVAE(CoVAEBase):
         c_noise = t.log() / 4
         emb = self.model.time_embedding(c_noise.flatten(), class_labels=class_labels)
         mu, logvar = self.model.encoder(x, emb)
-        print('mu', mu.shape, 'logvar', logvar.shape, 'noise', noise.shape)
-        import sys; sys.exit()
         z = self._reparametrized_sample(mu, logvar, noise)
         x, denoiser_x = self._decode_fn(z, t, emb)
         return x, mu, logvar, denoiser_x
@@ -186,6 +184,7 @@ class CoVAE(CoVAEBase):
         mu = torch.zeros([sample_shape[0]] + self.noise_shape, dtype=torch.float32, device=device)
         std = torch.ones([sample_shape[0]] + self.noise_shape, dtype=torch.float32, device=device)
         z = self._reparametrized_sample(mu, std, noise)
+        print('sample shape', sample_shape, 'noise shape', noise.shape, 'z shape', z.shape)
         # z = torch.randn([sample_shape[0]] + self.noise_shape).to(device)
         x, _ = self.decode(z, t, class_labels)
         if idx is None:
@@ -196,5 +195,7 @@ class CoVAE(CoVAEBase):
         for i in range(1, n_iters):
             t = torch.ones(sample_shape[0], device=device) * time_steps[idx].to(device)
             noise = self.sample_noise(sample_shape[0], device)
+            print('noise shape', noise.shape)
+            print('x shape before precond', x.shape) # this is Bx1xHxW when it should be Bx3xHxW
             x, _, _, _ = self.precond(x, t, noise, class_labels)
         return x

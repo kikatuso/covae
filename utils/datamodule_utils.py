@@ -17,7 +17,7 @@ def get_datamodule(cfg: DictConfig):
     elif cfg.dataset.name == 'celeba64':
         dm = CelebA64DataModule(batch_size=cfg.dataset.batch_size, size=cfg.dataset.size, num_workers=cfg.dataset.num_workers, data_dir=cfg.dataset.data_dir)
     elif cfg.dataset.name == 'ukb':
-        dm = UKBDataModule(batch_size=cfg.dataset.batch_size, num_workers=cfg.dataset.num_workers, data_dir=cfg.dataset.data_dir)
+        dm = UKBDataModule(batch_size=cfg.dataset.batch_size, num_workers=cfg.dataset.num_workers, data_dir=cfg.dataset.data_dir, image_size=cfg.dataset.img_resolution)
     else:
         raise NotImplementedError
 

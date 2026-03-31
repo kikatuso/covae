@@ -38,6 +38,7 @@ def get_neural_net(cfg: DictConfig, pretrained_net):
             attn_resolutions=cfg.network.attn_resolutions,
             dropout=cfg.network.dropout,
             z_channels=cfg.network.z_channels,
+            denoiser_loss_mode=cfg.model.denoiser_loss_mode,
         )
     else:
         raise NotImplementedError

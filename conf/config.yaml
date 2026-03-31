@@ -20,7 +20,7 @@ log_model: False
 deterministic: False
 sync_batchnorm: False
 
-log_frequency: 1000
+log_frequency: 10
 precision: 'bf16-mixed'
 accumulate_grad_batches: 1
 accelerator: 'gpu'
