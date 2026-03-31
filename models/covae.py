@@ -135,8 +135,6 @@ class CoVAE(CoVAEBase):
             # boundary condition
             x_r = torch.where(self._append_dims(idxs > 0, dims).to(device), x_r, x)
         
-        print('x shape', x.shape, 'x_t shape', x_t.shape, 'x_r shape', x_r.shape)
-
         rec_loss = self._loss_fn(x_t, x_r.detach(), self.loss_mode)
         log_dict['rec_loss'] = rec_loss.detach().view(batch_size, -1).sum(1).mean()
         rec_loss_weights = self._get_rec_loss_weights(t)

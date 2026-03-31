@@ -27,30 +27,34 @@ class DiagnosticCallback(L.Callback):
                     batch_size = inputs.shape[0]
                     recs = [inputs]
                     means = []
-                    stds = []
+                    logvars = []
                     latents = []
+                    kl_diffs = []
+
                     pl_module.model.eval()
                     num_timesteps = pl_module.model._step_schedule(pl_module.step)
                     time_steps = pl_module.model._get_time_steps(num_timesteps, device=inputs.device)
-                    #noise = torch.randn([batch_size] + pl_module.model.noise_shape, dtype=torch.float32).to(inputs.device)
+
                     noise = pl_module.model.sample_noise(batch_size, inputs.device)
+
                     for t in time_steps[1:]:
-                        rec, mu, std, _ = pl_module.ema.eval().precond(inputs, t, noise, labels)
-                        recs.append(rec.clamp(-1,1))
+                        rec, mu, logvar, _ = pl_module.ema.eval().precond(inputs, t, noise, labels)
+                        rec = rec.clamp(-1, 1)
+
+                        recs.append(rec)
                         means.append(mu)
-                        stds.append(std)
-                        #latents.append(torch.linalg.norm((mu + noise * std).view(batch_size, -1), dim=1))
-                        latents.append(torch.linalg.norm((pl_module.model._reparametrized_sample(mu, std, noise)).reshape(batch_size, -1), dim=1))
+                        logvars.append(logvar)
+                        latents.append(torch.linalg.norm(
+                            pl_module.model._reparametrized_sample(mu, logvar, noise).reshape(batch_size, -1),
+                            dim=1
+                        ))
+
+                        kl = 0.5 * (torch.exp(logvar) + mu**2 - 1 - logvar)
+                        kl_diffs.append(kl.view(batch_size, -1).sum(1))
+
                     img_rec_diff = [((inputs - r)**2).view(batch_size, -1).sum(1) for r in recs[1:]]
-                    #prior = torch.distributions.Normal(torch.zeros_like(mu), torch.ones_like(std))
-                    prior = pl_module.model._get_distribution(torch.zeros_like(mu), torch.ones_like(std))
                     rec_diffs = [((recs[i] - recs[i+1])**2).view(batch_size, -1).sum(1) for i in range(len(recs)-1)]
-                    '''kl_diffs = [torch.distributions.kl_divergence(torch.distributions.Normal(means[i], stds[i] + 1e-8),
-                                                                  prior).view(batch_size, -1).sum(1) for i in
-                                range(len(means))]'''
-                    kl_diffs = [torch.distributions.kl_divergence(pl_module.model._get_distribution(means[i], stds[i] + 1e-8),
-                                                                  prior).view(batch_size, -1).sum(1) for i in
-                                range(len(means))]
+
                     rec_mean_diffs = np.array([np.mean(d.detach().cpu().numpy()) for d in rec_diffs])
                     rec_std_diffs = np.array([np.std(d.detach().cpu().numpy()) for d in rec_diffs])
                     kl_mean_diffs = np.array([np.mean(d.detach().cpu().numpy()) for d in kl_diffs])

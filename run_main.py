@@ -13,7 +13,7 @@ cmd = [
     "dataset=ukb", 
     "dataset.name=ukb",
     "dataset.num_workers=3",   # dataloader workers
-    "dataset.batch_size=16",
+    "dataset.batch_size=12",
     'dataset.img_resolution=256',
 
     "model=covae", # covae
