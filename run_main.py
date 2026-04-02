@@ -46,7 +46,7 @@ cmd = [
     "network.channel_mult_enc=[1,2,2,4]",
     "network.channel_mult_dec=[1,2,2,4]",
 
-    "gradient_clip_val=200",
+    "gradient_clip_val=1",
     "deterministic=True",
 
 ]

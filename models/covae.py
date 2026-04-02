@@ -7,12 +7,18 @@ from functools import reduce
 
 from models.covae_base import CoVAEBase
 
+# this implementation uses some of the methods from seminal consistency model paper: https://arxiv.org/abs/2303.01469
+# with some of the improvements from iCM: https://arxiv.org/abs/2310.14189
+
+
 class CoVAE(CoVAEBase):
     def __init__(self,
                  time_scale,
                  rec_weight_mode,
                  kl_weight_mode,
                  lambda_denoiser,
+                 rec_scale = 1e-3,
+                 kl_scale = 1e-6,
                  **cm_kwargs
                  ):
         super().__init__(**cm_kwargs)
@@ -20,6 +26,8 @@ class CoVAE(CoVAEBase):
         self.rec_weight_mode = rec_weight_mode
         self.kl_weight_mode = kl_weight_mode
         self.lambda_denoiser = lambda_denoiser
+        self.rec_scale = rec_scale
+        self.kl_scale = kl_scale
 
     def sample_noise(self, batch_size, device):
         return torch.randn([batch_size] + self.noise_shape, dtype=torch.float32).to(device)
@@ -52,23 +60,29 @@ class CoVAE(CoVAEBase):
     def _get_kl_loss_weights(self, t):
         return 1 / self._get_loss_weights(t, self.kl_weight_mode)
 
-    def _get_loss_weights(self, t, mode):
+    def _get_loss_weights(self, t, mode, eps=1e-3):
+        # this is not the same as in iCM 
         assert mode in ['linear', 'square', 'ones']
+        t = t.clamp_min(eps)
         if mode == 'linear':
             return 1 / t
         elif mode == 'square':
             return 1 / (t ** 2)
         elif mode == 'ones':
             return torch.ones_like(t)
-
+    
     def _decode_fn(self, z, t, emb):
         x = self.model.decoder(z, emb)
         if self.denoiser_loss_mode:
             x, denoiser_x = torch.chunk(x, 2, dim=1)
-            x = denoiser_x.detach() + (t - self.sigma_min) / (self.sigma_max - self.sigma_min) * x
+            x = denoiser_x.detach() + self._get_alpha(t) * x
         else:
             denoiser_x = None
         return x, denoiser_x
+    
+    def _get_alpha(self, t):
+        return (t - self.sigma_min) / (self.sigma_max - self.sigma_min)
+
 
     def precond(self, x, t, noise, class_labels):
         emb,t = self._time_embedding(t, x, class_labels)
@@ -112,9 +126,9 @@ class CoVAE(CoVAEBase):
         batch_size = x.shape[0]
         num_timesteps = self._step_schedule(step)
         time_steps = self._get_time_steps(num_timesteps, device=device)
-        idxs = torch.randint(0, len(time_steps) - 1, (batch_size,))
-        t = time_steps[idxs + 1].to(device)
-        r = time_steps[idxs].to(device)
+        idxs = torch.randint(0, len(time_steps) - 1, (batch_size,)) # this is original CM implementation, iCM uses sigma_ in covae_simple.py
+        t = time_steps[idxs + 1].to(device) # this is sigma_t 
+        r = time_steps[idxs].to(device) # this is sigma_r
         noise = self.sample_noise(batch_size, device)
 
         with isolate_rng():
@@ -130,18 +144,17 @@ class CoVAE(CoVAEBase):
         if self.loss_mode == 'bce':
             x_r = torch.where(self._append_dims(idxs > 0, dims).to(device), nn.functional.sigmoid(x_r), x)
         else:
-            # boundary condition
             x_r = torch.where(self._append_dims(idxs > 0, dims).to(device), x_r, x)
         
         rec_loss = self._loss_fn(x_t, x_r.detach(), self.loss_mode)
         log_dict['rec_loss'] = rec_loss.detach().view(batch_size, -1).sum(1).mean()
-        rec_loss_weights = self._get_rec_loss_weights(t)
-        kl_loss_weights = self._get_kl_loss_weights(t)
+        rec_loss_weights = self._get_rec_loss_weights(t) * self.rec_scale
+        kl_loss_weights = self._get_kl_loss_weights(t) * self.kl_scale
 
         if self.denoiser_loss_mode:
             denoiser_loss = self._loss_fn(denoiser_x, x, self.denoiser_loss_mode)
             log_dict['denoiser_loss'] = denoiser_loss.detach().view(batch_size, -1).sum(1).mean()
-            denoiser_skip = self.lambda_denoiser + (1 - self.lambda_denoiser) * (1 - (t - self.sigma_min)/(self.sigma_max - self.sigma_min))
+            denoiser_skip = self.lambda_denoiser + (1 - self.lambda_denoiser) * (1 - self._get_alpha(t))
             denoiser_loss = denoiser_loss * self._append_dims(denoiser_skip, dims)
             denoiser_loss = denoiser_loss.view(batch_size, -1).sum(1) * rec_loss_weights
         else:
@@ -163,7 +176,7 @@ class CoVAE(CoVAEBase):
         else:
             gan_loss = 0.
 
-        rec_loss = rec_loss.view(batch_size, -1).sum(1) * rec_loss_weights
+        rec_loss = rec_loss.view(batch_size, -1).sum(1) * rec_loss_weights 
         kl_loss = self.kl_loss(mu, logvar) * kl_loss_weights
 
         log_dict['kl_loss'] = kl_loss.detach().mean()
@@ -181,7 +194,7 @@ class CoVAE(CoVAEBase):
         time_steps = self._get_time_steps(self.end_scales + 1, device)
         t = torch.ones(sample_shape[0], device=device) * time_steps[-1]
         noise = self.sample_noise(sample_shape[0], device) * temperature
-        mu = torch.zeros([sample_shape[0]] + self.noise_shape, dtype=torch.float32, device=device)
+        mu = torch.zeros([sample_shape[0]] + self.noise_shape,dtype=torch.float32, device=device)
         std = torch.ones([sample_shape[0]] + self.noise_shape, dtype=torch.float32, device=device)
         z = self._reparametrized_sample(mu, std, noise)
         # z = torch.randn([sample_shape[0]] + self.noise_shape).to(device)

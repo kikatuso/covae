@@ -109,8 +109,8 @@ if __name__ =='__main__':
         num_timesteps = model._step_schedule(total_training_steps)
         print('num_timesteps', num_timesteps)
         timesteps = model._get_time_steps(num_timesteps, device='cpu')
-        kl_weights = model._get_kl_loss_weights(timesteps).cpu().numpy()
-        rec_weights = model._get_rec_loss_weights(timesteps).cpu().numpy()
+        kl_weights = (model._get_kl_loss_weights(timesteps) * model.kl_scale).cpu().numpy()
+        rec_weights = (model._get_rec_loss_weights(timesteps) * model.rec_scale).cpu().numpy()
         print('kl_weights', kl_weights.min(), kl_weights.max())
         print('rec_weights', rec_weights.min(), rec_weights.max())
 

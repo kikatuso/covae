@@ -79,6 +79,7 @@ class CoVAEBase(nn.Module):
     def _step_schedule(self, step):
 
         if self.step_schedule == 'exp':
+            # Discretization curriculum from iCM
             k_prime = math.floor(
                 self.total_training_steps
                 / (math.log2(math.floor(self.end_scales / self.start_scales)) + 1)
